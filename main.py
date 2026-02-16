@@ -3,6 +3,8 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DECIMAL, TI
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+from pydantic import BaseModel
+
 
 #Database connection
 DATABASE_URL = "postgresql://benwilcox@localhost:5432/inventory_db"
@@ -22,6 +24,12 @@ class Item(Base):
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.utcnow)
 
+class ItemCreate(BaseModel):
+    name: str
+    description: str = None
+    quantity: int = 0
+    price: float = None
+
 #Create FastAPI app
 app = FastAPI()
 
@@ -31,3 +39,18 @@ def get_items():
     items = db.query(Item).all()
     db.close()
     return {"items": items}
+
+@app.post("/api/items")
+def add_item(item: ItemCreate):
+    db = sessionLocal()
+    new_item = Item(
+        name = item.name,
+        desciption = item.description,
+        quantity = item.quantity,
+        price = item.price
+    )
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    db.close()
+    return new_item
