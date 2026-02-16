@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from sqlalchemy import create_engine, Column, Integer, String, Text, DECIMAL, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -45,7 +45,7 @@ def add_item(item: ItemCreate):
     db = sessionLocal()
     new_item = Item(
         name = item.name,
-        desciption = item.description,
+        description = item.description,
         quantity = item.quantity,
         price = item.price
     )
@@ -54,3 +54,27 @@ def add_item(item: ItemCreate):
     db.refresh(new_item)
     db.close()
     return new_item
+
+@app.get("/api/items/{item_id}")
+def get_item(item_id: int):
+    db = sessionLocal()
+    item = db.query(Item).filter(Item.id == item_id).first()
+    db.close()
+    if item:
+        return item
+    else:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+
+@app.delete("/api/items/{item_id}")
+def delete_item(item_id: int):
+    db = sessionLocal()
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
+        db.close()
+        raise HTTPException(status_code=404, detail = "Item not found")
+    db.delete(item)
+    db.commit()
+    db.close()
+    return {"message": "Item deleted successfully", "item": item}
+
